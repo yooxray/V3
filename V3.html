@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leather Stock Journal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #1a1a1a; }
+        .journal-input { border: none; border-bottom: 1px solid #e5e7eb; padding: 0.5rem 0; width: 100%; transition: border-color 0.2s; outline: none; }
+        .journal-input:focus { border-bottom-color: #000; }
+        .card { border: 1px solid #f3f4f6; transition: all 0.3s ease; }
+        .card:hover { border-color: #d1d5db; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+        
+        /* Custom styling for the status dropdown in the list */
+        .status-select {
+            appearance: none;
+            cursor: pointer;
+            padding: 0.375rem 1rem;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border: none;
+            outline: none;
+            transition: all 0.2s;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 bg-white/80 backdrop-blur-md border-b border-gray-100 z-50">
+        <div class="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-tighter uppercase">Leather Journal</h1>
+            <div class="flex gap-8 text-sm font-medium">
+                <button onclick="showView('journal')" id="nav-journal" class="text-black">Logbook</button>
+                <button onclick="showView('dashboard')" id="nav-dashboard" class="text-gray-400 hover:text-black">Dashboard</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto px-6 py-12">
+        
+        <!-- Summary Cards Header -->
+        <div id="summary-cards" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+            <div class="p-8 border border-gray-100 rounded-2xl bg-gray-50/50">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Documents</p>
+                <h2 id="sum-docs" class="text-3xl font-light">0</h2>
+            </div>
+            <div class="p-8 border border-gray-100 rounded-2xl bg-gray-50/50">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Stock on Hand</p>
+                <h2 id="sum-qty" class="text-3xl font-light text-indigo-600">0</h2>
+            </div>
+            <div class="p-8 border border-gray-100 rounded-2xl bg-gray-50/50">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Last Sync</p>
+                <h2 id="sum-updated" class="text-sm font-medium mt-2">No entries yet</h2>
+            </div>
+        </div>
+
+        <!-- VIEW: JOURNAL LIST -->
+        <div id="view-journal" class="space-y-12">
+            <div class="flex justify-between items-end border-b border-gray-100 pb-6">
+                <div>
+                    <h2 class="text-3xl font-bold tracking-tight">Daily Log</h2>
+                    <p class="text-gray-400">Inventory history by project.</p>
+                </div>
+                <button onclick="openEntryForm()" class="bg-black text-white px-6 py-3 rounded-full text-sm font-bold hover:bg-gray-800 transition-all">
+                    + New Entry
+                </button>
+            </div>
+
+            <div id="journal-list" class="space-y-16">
+                <!-- Entries will appear here -->
+            </div>
+        </div>
+
+        <!-- VIEW: DASHBOARD -->
+        <div id="view-dashboard" class="hidden space-y-16">
+            <header>
+                <h2 class="text-3xl font-bold tracking-tight text-slate-900">Stock Analytics</h2>
+                <p class="text-gray-400">Inventory totals filtered by category.</p>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12" id="dashboard-grids">
+                <!-- Analytics Tables will appear here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- FORM MODAL (Full Screen Minimal) -->
+    <div id="entry-modal" class="fixed inset-0 bg-white z-[100] hidden overflow-y-auto">
+        <div class="max-w-3xl mx-auto px-6 py-16">
+            <div class="flex justify-between items-center mb-16">
+                <span class="text-xs font-bold uppercase tracking-[0.3em] text-gray-300">Journal Registration</span>
+                <button onclick="closeModal()" class="text-sm font-bold uppercase hover:underline">Close</button>
+            </div>
+
+            <form id="journal-form" onsubmit="saveEntry(event)">
+                <input type="hidden" id="edit-id">
+                
+                <!-- Journal Header -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
+                    <div>
+                        <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Date</label>
+                        <input type="date" id="form-date" required class="journal-input text-lg">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Project Name</label>
+                        <input type="text" id="form-project" required placeholder="e.g. Autumn Collection" class="journal-input">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Customer</label>
+                        <input type="text" id="form-customer" required placeholder="Client Name" class="journal-input">
+                    </div>
+                </div>
+
+                <!-- Products Container -->
+                <div id="form-products-container" class="space-y-16">
+                    <!-- Product rows added here -->
+                </div>
+
+                <div class="mt-12 flex flex-col gap-4">
+                    <button type="button" onclick="addProductRow()" class="w-full py-4 border border-dashed border-gray-200 rounded-xl text-gray-400 text-sm font-medium hover:border-black hover:text-black transition-all">
+                        + Add Another Product Item
+                    </button>
+                    
+                    <div class="flex items-center gap-4 mt-8 pt-8 border-t border-gray-100">
+                        <div class="flex-1">
+                            <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">Status</label>
+                            <select id="form-status" class="journal-input">
+                                <option value="Pending">Pending</option>
+                                <option value="Completed">Completed</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="flex-[2] bg-black text-white py-4 rounded-xl font-bold hover:bg-gray-800 shadow-lg transition-all">
+                            Save Journal Entry
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Clear All Tool -->
+    <div class="max-w-5xl mx-auto px-6 py-20 text-center border-t border-gray-100 mt-20">
+        <button onclick="clearAllData()" class="text-xs font-bold uppercase text-gray-300 hover:text-red-500 tracking-widest transition-all">
+            Clear all journal data
+        </button>
+    </div>
+
+    <script>
+        let db = JSON.parse(localStorage.getItem('leather_journal_v1')) || [];
+        let lastUpdated = localStorage.getItem('leather_updated') || null;
+
+        function showView(view) {
+            document.getElementById('view-journal').classList.toggle('hidden', view !== 'journal');
+            document.getElementById('view-dashboard').classList.toggle('hidden', view !== 'dashboard');
+            document.getElementById('nav-journal').className = view === 'journal' ? 'text-black' : 'text-gray-400 hover:text-black';
+            document.getElementById('nav-dashboard').className = view === 'dashboard' ? 'text-black' : 'text-gray-400 hover:text-black';
+            if(view === 'dashboard') renderDashboard();
+            else renderJournal();
+        }
+
+        function openEntryForm(entryId = null) {
+            const modal = document.getElementById('entry-modal');
+            const form = document.getElementById('journal-form');
+            const container = document.getElementById('form-products-container');
+            form.reset();
+            container.innerHTML = '';
+            document.getElementById('edit-id').value = entryId || '';
+
+            if (entryId) {
+                const entry = db.find(e => e.id == entryId);
+                document.getElementById('form-date').value = entry.date;
+                document.getElementById('form-project').value = entry.project;
+                document.getElementById('form-customer').value = entry.customer;
+                document.getElementById('form-status').value = entry.status;
+                entry.products.forEach(p => addProductRow(p));
+            } else {
+                addProductRow();
+            }
+
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('entry-modal').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        function addProductRow(data = {}) {
+            const container = document.getElementById('form-products-container');
+            const rowId = Date.now() + Math.random();
+            const html = `
+                <div class="product-row animate-in fade-in slide-in-from-top-4" id="row-${rowId}">
+                    <div class="flex justify-between items-center mb-6">
+                        <span class="text-[10px] font-bold text-gray-800 bg-gray-100 px-3 py-1 rounded">Product Details</span>
+                        <button type="button" onclick="removeProductRow('${rowId}')" class="text-xs text-red-400 hover:text-red-600">Remove</button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-y-10 gap-x-12">
+                        ${generateInput('Doc #', 'docNum', data.docNum)}
+                        ${generateInput('Leather Type', 'type', data.type)}
+                        ${generateInput('Pattern', 'pattern', data.pattern)}
+                        ${generateInput('Color', 'color', data.color)}
+                        ${generateInput('Glossiness', 'gloss', data.gloss)}
+                        ${generateInput('Thickness (mm)', 'thick', data.thick)}
+                        ${generateInput('Size (cm)', 'size', data.size)}
+                        ${generateInput('Quantity', 'qty', data.qty, 'number')}
+                        ${generateInput('Note', 'note', data.note)}
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+
+        function generateInput(label, key, val = '', type = 'text') {
+            return `
+                <div>
+                    <label class="text-[10px] font-bold uppercase text-gray-400 block mb-1">${label}</label>
+                    <input type="${type}" data-key="${key}" value="${val}" class="journal-input text-sm">
+                </div>
+            `;
+        }
+
+        function removeProductRow(id) {
+            document.getElementById(`row-${id}`).remove();
+        }
+
+        function saveEntry(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const entryDate = document.getElementById('form-date').value;
+            
+            const productRows = document.querySelectorAll('.product-row');
+            const products = Array.from(productRows).map(row => {
+                const item = {};
+                row.querySelectorAll('input').forEach(input => {
+                    item[input.dataset.key] = input.value;
+                });
+                return item;
+            });
+
+            const entryData = {
+                id: id || Date.now(),
+                date: entryDate,
+                project: document.getElementById('form-project').value,
+                customer: document.getElementById('form-customer').value,
+                status: document.getElementById('form-status').value,
+                products: products
+            };
+
+            if (id) {
+                const idx = db.findIndex(e => e.id == id);
+                db[idx] = entryData;
+            } else {
+                db.unshift(entryData);
+            }
+
+            saveToStorage();
+            closeModal();
+            updateUI();
+        }
+
+        // NEW FUNCTION: Quick Status Update from Logbook
+        function quickUpdateStatus(id, newStatus) {
+            const idx = db.findIndex(e => e.id == id);
+            if (idx !== -1) {
+                db[idx].status = newStatus;
+                saveToStorage();
+                renderJournal(); // Refresh view to update colors
+            }
+        }
+
+        function saveToStorage() {
+            lastUpdated = new Date().toLocaleString();
+            localStorage.setItem('leather_journal_v1', JSON.stringify(db));
+            localStorage.setItem('leather_updated', lastUpdated);
+        }
+
+        function deleteEntry(id) {
+            if (confirm('Are you sure you want to delete this journal entry?')) {
+                db = db.filter(e => e.id != id);
+                saveToStorage();
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            renderSummary();
+            renderJournal();
+        }
+
+        function renderSummary() {
+            let totalQty = 0;
+            let totalDocs = 0;
+            db.forEach(entry => {
+                entry.products.forEach(p => {
+                    totalQty += Number(p.qty || 0);
+                    if (p.docNum) totalDocs++;
+                });
+            });
+
+            document.getElementById('sum-docs').innerText = totalDocs;
+            document.getElementById('sum-qty').innerText = totalQty.toLocaleString();
+            document.getElementById('sum-updated').innerText = lastUpdated || 'No data';
+        }
+
+        function renderJournal() {
+            const list = document.getElementById('journal-list');
+            if (db.length === 0) {
+                list.innerHTML = `<div class="text-center py-20 text-gray-400">The logbook is currently empty.</div>`;
+                return;
+            }
+
+            list.innerHTML = db.map(entry => `
+                <div class="group border-l-2 border-gray-100 pl-8 relative">
+                    <div class="absolute -left-[5px] top-0 w-2 h-2 rounded-full bg-gray-200"></div>
+                    <div class="mb-10">
+                        <span class="text-sm font-black text-indigo-600">${entry.date}</span>
+                        <h3 class="text-2xl font-bold mt-2">${entry.project}</h3>
+                        <p class="text-gray-400 text-sm">Customer: ${entry.customer}</p>
+                    </div>
+                    <div class="space-y-10">
+                        ${entry.products.map((p, idx) => `
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 ${idx !== entry.products.length - 1 ? 'border-b border-gray-50' : ''}">
+                                <div class="col-span-1">
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Identification</p>
+                                    <p class="text-sm font-bold">${p.docNum || 'No Doc #'}</p>
+                                    <p class="text-sm text-gray-500 mt-1">${p.type} • ${p.color}</p>
+                                </div>
+                                <div class="col-span-1">
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Specs</p>
+                                    <p class="text-sm font-medium">${p.pattern} / ${p.gloss}</p>
+                                    <p class="text-xs text-gray-400 mt-1">${p.thick}mm • ${p.size}cm</p>
+                                </div>
+                                <div class="col-span-1">
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Quantity</p>
+                                    <p class="text-xl font-light">${p.qty || 0}</p>
+                                </div>
+                                <div class="col-span-1">
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Notes</p>
+                                    <p class="text-xs text-gray-400 italic">${p.note || '-'}</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="mt-8 flex justify-between items-center">
+                        <div>
+                            <!-- DYNAMIC DROPDOWN STATUS -->
+                            <select 
+                                onchange="quickUpdateStatus('${entry.id}', this.value)" 
+                                class="status-select ${entry.status === 'Completed' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}"
+                            >
+                                <option value="Pending" ${entry.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                                <option value="Completed" ${entry.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-4">
+                            <button onclick="openEntryForm('${entry.id}')" class="text-xs font-bold uppercase hover:underline">Edit Entry</button>
+                            <button onclick="deleteEntry('${entry.id}')" class="text-xs font-bold uppercase text-red-300 hover:text-red-600">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderDashboard() {
+            const grid = document.getElementById('dashboard-grids');
+            const friendlyNames = {
+                type: 'Leather Type',
+                pattern: 'Pattern',
+                color: 'Color',
+                gloss: 'Glossiness',
+                thick: 'Thickness',
+                size: 'Size'
+            };
+
+            const totals = { type: {}, pattern: {}, color: {}, gloss: {}, thick: {}, size: {} };
+            const monthly = {};
+
+            db.forEach(entry => {
+                const monthYear = entry.date.substring(0, 7);
+                if(!monthly[monthYear]) monthly[monthYear] = 0;
+                
+                entry.products.forEach(p => {
+                    const q = Number(p.qty || 0);
+                    monthly[monthYear] += q;
+                    Object.keys(totals).forEach(key => {
+                        const val = p[key] || 'Uncategorized';
+                        totals[key][val] = (totals[key][val] || 0) + q;
+                    });
+                });
+            });
+
+            let html = `
+                <div class="col-span-full mb-8">
+                    <h3 class="text-sm font-bold uppercase tracking-widest mb-6 border-b pb-2">Monthly Stock Inflow</h3>
+                    <div class="flex flex-wrap gap-4">
+                        ${Object.entries(monthly).sort().map(([mon, q]) => `
+                            <div class="bg-gray-50 p-6 rounded-2xl flex-1 min-w-[150px]">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase">${mon}</p>
+                                <p class="text-2xl font-light">${q.toLocaleString()}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            Object.entries(totals).forEach(([key, data]) => {
+                const title = friendlyNames[key] || key;
+                html += `
+                    <div class="space-y-4">
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-indigo-600 border-b border-gray-50 pb-2">${title} Summary</h3>
+                        <table class="w-full text-sm">
+                            ${Object.entries(data).sort((a,b) => b[1] - a[1]).map(([label, qty]) => `
+                                <tr>
+                                    <td class="py-2 text-gray-600">${label}</td>
+                                    <td class="py-2 text-right font-bold">${qty.toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    </div>
+                `;
+            });
+
+            grid.innerHTML = html;
+        }
+
+        function clearAllData() {
+            if (confirm('CRITICAL: This will delete every journal entry permanently. Continue?')) {
+                db = [];
+                localStorage.removeItem('leather_journal_v1');
+                localStorage.removeItem('leather_updated');
+                location.reload();
+            }
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
